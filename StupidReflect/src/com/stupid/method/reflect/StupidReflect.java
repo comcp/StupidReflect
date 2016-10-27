@@ -2,7 +2,6 @@ package com.stupid.method.reflect;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
-import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -13,7 +12,6 @@ import android.app.Activity;
 import android.content.res.Resources;
 import android.text.Editable;
 import android.text.TextWatcher;
-import android.util.Log;
 import android.util.SparseArray;
 import android.view.View;
 import android.view.View.OnClickListener;
@@ -76,66 +74,6 @@ public final class StupidReflect {
 
 		}
 
-	}
-
-	private static String tag = "stupid.refect";
-
-	/**
-	 * @param target
-	 * @param field
-	 * @return
-	 */
-	private final static Object getField(Object target, Field field) {
-		Object result = null;
-		try {
-			result = field.get(target);
-		} catch (IllegalArgumentException e) {
-			e.printStackTrace();
-		} catch (IllegalAccessException e) {
-			e.printStackTrace();
-		}
-		return result;
-	}
-
-	private static final Object invoke(Object targetObject, Method method,
-			Object... par) {
-		try {
-			method.setAccessible(true);
-			return method.invoke(targetObject, par);
-		} catch (IllegalArgumentException e) {
-			e.printStackTrace();
-		} catch (IllegalAccessException e) {
-			e.printStackTrace();
-		} catch (InvocationTargetException e) {
-			e.printStackTrace();
-		} catch (Exception e) {
-			Log.e(tag,
-					"↓↓↓↓↓↓↓↓↓↓↓↓↓----onClickView-Exception----↓↓↓↓↓↓↓↓↓↓↓↓↓");
-			Log.e(tag, method.toGenericString(), e);
-			Log.e(tag,
-					"↑↑↑↑↑↑↑↑↑↑↑↑↑----onClickView-Exception----↑↑↑↑↑↑↑↑↑↑↑↑↑");
-		}
-		return null;
-	}
-
-	/**
-	 * @param target
-	 * @param field
-	 * @param value
-	 * @return
-	 */
-	private final static boolean setField(Object target, Field field,
-			Object value) {
-		boolean result = false;
-		try {
-			field.set(target, value);
-			result = true;
-		} catch (IllegalArgumentException e) {
-			e.printStackTrace();
-		} catch (IllegalAccessException e) {
-			e.printStackTrace();
-		}
-		return result;
 	}
 
 	final Activity fromActivity;
@@ -232,7 +170,7 @@ public final class StupidReflect {
 					Annotation[][] annotations = method
 							.getParameterAnnotations();
 					if (parameter.length == 0) {
-						invoke(mTarget, method);
+						ReflectUtil.invoke(mTarget, method);
 					} else {
 						Object[] para = new Object[parameter.length];
 						for (int i = 0; i < para.length; i++) {
@@ -257,10 +195,11 @@ public final class StupidReflect {
 									para[i] = view;
 								} else {
 									if (!"".equals(valueById.fromMethodName())) {
-										Method viewMet = getMethod(
+										Method viewMet = ReflectUtil.getMethod(
 												view.getClass(),
 												valueById.fromMethodName());
-										para[i] = invoke(view, viewMet);
+										para[i] = ReflectUtil.invoke(view,
+												viewMet);
 									} else
 										para[i] = ViewTo.toValue(view, cls);
 								}
@@ -268,7 +207,7 @@ public final class StupidReflect {
 								para[i] = ViewTo.toValue(et, cls);
 							}
 						}
-						invoke(mTarget, method, para);
+						ReflectUtil.invoke(mTarget, method, para);
 					}
 				}
 
@@ -299,30 +238,21 @@ public final class StupidReflect {
 		for (int i = 0; i < ids.length; i++) {
 			View view = findViewById(ids[i]);
 			if (view != null) {
-				Method m = getMethod(view.getClass(),
-						"setOnCheckedChangeListener",
-						android.widget.RadioGroup.OnCheckedChangeListener.class);
+				Method m = ReflectUtil
+						.getMethod(
+								view.getClass(),
+								"setOnCheckedChangeListener",
+								android.widget.RadioGroup.OnCheckedChangeListener.class);
 				if (m == null)
-					m = getMethod(
-							view.getClass(),
-							"setOnCheckedChangeListener",
-							android.widget.CompoundButton.OnCheckedChangeListener.class);
+					m = ReflectUtil
+							.getMethod(
+									view.getClass(),
+									"setOnCheckedChangeListener",
+									android.widget.CompoundButton.OnCheckedChangeListener.class);
 				if (m != null)
-					invoke(view, m, call);
+					ReflectUtil.invoke(view, m, call);
 			}
 		}
-	}
-
-	private static final Method getMethod(Class<?> clz, String name,
-			Class<?>... parameterTypes) {
-		try {
-			return clz.getMethod(name, parameterTypes);
-		} catch (SecurityException e) {
-			e.printStackTrace();
-		} catch (NoSuchMethodException e) {
-			e.printStackTrace();
-		}
-		return null;
 	}
 
 	private View findView(int id, String idName, String defPackage) {
@@ -391,7 +321,7 @@ public final class StupidReflect {
 		View view;
 		view = findView(id, field.getName(),
 				"".equals(byID.defPackage()) ? packageName : byID.defPackage());
-		setField(target, field, view);
+		ReflectUtil.setFieldValue(target, field, view);
 	}
 
 	private Object viewClickCallMethod(Object targetObject, View v,
@@ -400,7 +330,7 @@ public final class StupidReflect {
 		Annotation[][] annotations = method.getParameterAnnotations();
 		Object result = null;
 		if (parameter.length == 0) {
-			result = invoke(targetObject, method);
+			result = ReflectUtil.invoke(targetObject, method);
 		} else {
 			Object[] para = new Object[parameter.length];
 			for (int i = 0; i < para.length; i++) {
@@ -425,9 +355,10 @@ public final class StupidReflect {
 						para[i] = view;
 					} else {
 						if (!"".equals(valueById.fromMethodName())) {
-							Method viewMet = getMethod(view.getClass(),
-									valueById.fromMethodName());
-							para[i] = invoke(view, viewMet);
+							Method viewMet = ReflectUtil
+									.getMethod(view.getClass(),
+											valueById.fromMethodName());
+							para[i] = ReflectUtil.invoke(view, viewMet);
 						} else
 							para[i] = ViewTo.toValue(view, cls);
 					}
@@ -435,7 +366,7 @@ public final class StupidReflect {
 					para[i] = ViewTo.toValue(v, cls);
 				}
 			}
-			result = invoke(targetObject, method, para);
+			result = ReflectUtil.invoke(targetObject, method, para);
 		}
 		return result;
 	}

@@ -23,11 +23,17 @@ public class MainActivity extends Activity {
 	}
 
 	@XClick({ R.id.submit })
-	private void onSubmit(@XGetValueByView(fromId = R.id.userId) String userId,
+	private void onSubmit(
+			@XGetValueByView(fromId = R.id.userId) String userId,
 			@XGetValueByView(fromId = R.id.pwd1) String pwd1,
-			@XGetValueByView(fromId = R.id.pwd2) String pwd2) {
-		Toast.makeText(this,
-				"userId:" + userId + "\r\npwd1:" + pwd1 + "\r\npwd2:" + pwd2,
+			@XGetValueByView(fromId = R.id.pwd2) String pwd2,
+			@XGetValueByView(fromId = R.id.gender, fromMethodName = "getCheckedRadioButtonId") int gender) {
+
+		Toast.makeText(
+				this,
+				"userId:" + userId + "\r\npwd1:" + pwd1 + "\r\npwd2:" + pwd2
+						+ "\r\n性别:" + (gender == R.id.man ? "男" : "女"),
+
 				Toast.LENGTH_SHORT).show();
 	}
 
@@ -35,7 +41,6 @@ public class MainActivity extends Activity {
 	private void onCheckCheng(boolean checked,
 			@XGetValueByView(fromId = R.id.pwd2) EditText pwd2) {
 		pwd2.setText("");
-
 		if (checked) {
 			pwd2.setVisibility(View.VISIBLE);
 		} else {
