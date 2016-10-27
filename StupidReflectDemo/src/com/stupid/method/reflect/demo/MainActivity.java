@@ -55,4 +55,29 @@ public class MainActivity extends Activity {
 			@XGetValueByView(fromId = R.id.tvMsg) TextView tvMsg) {
 		tvMsg.setText(txt);
 	}
+
+	/**
+	 * XGetValueByView(fromId = R.id.gender, fromMethodName = "getCheckedRadioButtonId") <br>
+	 * 相当于<br>
+	 * findViewById(R.id.gender).getCheckedRadioButtonId ()
+	 * 
+	 * @param changeId
+	 */
+	@XOnCheckedChange({ R.id.gender })
+	private void onRadioButtonChange(
+			@XGetValueByView(fromId = R.id.gender, fromMethodName = "getCheckedRadioButtonId") int changeId) {
+
+		switch (changeId) {
+		case R.id.woman:
+			Toast.makeText(this, "选择->女", Toast.LENGTH_SHORT).show();
+			break;
+
+		case R.id.man:
+			Toast.makeText(this, "选择->男", Toast.LENGTH_SHORT).show();
+			break;
+
+		default:
+			break;
+		}
+	}
 }
