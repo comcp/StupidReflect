@@ -25,7 +25,7 @@ public class MainActivity extends AppCompatActivity {
     @XOnCheckedChange({R.id.isAdmin})
     private void onCheckCheng(boolean checked,
                               @XGetValueByView(fromId = R.id.pwd2) EditText pwd2) {
-        pwd2.setText("");
+
         if (checked) {
             pwd2.setVisibility(View.VISIBLE);
         } else {
