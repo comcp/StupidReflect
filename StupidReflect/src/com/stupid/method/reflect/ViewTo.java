@@ -33,6 +33,6 @@ public class ViewTo {
 		if (view instanceof TextView)
 			return ((TextView) view).getText().toString();
 		else
-			return null;
+			return view.toString();
 	}
 }

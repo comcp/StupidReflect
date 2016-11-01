@@ -16,7 +16,8 @@ import android.util.Log;
  * @author wangx
  *
  */
-public class ReflectUtil {
+final public class ReflectUtil {
+	static final String tag = "ReflectUtil";
 
 	public static <T> T newInstance(Class<T> cls) {
 		try {
@@ -137,7 +138,15 @@ public class ReflectUtil {
 			method.setAccessible(true);
 			return method.invoke(targetObject, par);
 		} catch (IllegalArgumentException e) {
+			Log.e(tag, method.toGenericString());
+			Log.e(tag, targetObject.toString());
+			for (int i = 0; i < par.length; i++) {
+				Log.e(tag,
+						String.format("argument[%d]=%s", i,
+								String.valueOf(par[i])));
+			}
 			e.printStackTrace();
+
 		} catch (IllegalAccessException e) {
 			e.printStackTrace();
 		} catch (InvocationTargetException e) {
@@ -145,5 +154,4 @@ public class ReflectUtil {
 		}
 		return null;
 	}
-
 }

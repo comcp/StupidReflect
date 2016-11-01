@@ -34,8 +34,80 @@ import com.stupid.method.reflect.annotation.XViewByID;
  *
  */
 public final class StupidReflect {
-
 	Map<Method, CallMethod> map = new HashMap<Method, StupidReflect.CallMethod>();
+
+	private static final class Reflect {
+
+		List<Field> mFields = new ArrayList<Field>();
+		List<Method> mMethods = new ArrayList<Method>();
+		final Reflect parent;
+		private static final Map<Class<?>, Reflect> mCache = new HashMap<Class<?>, StupidReflect.Reflect>(
+				3);
+
+		private static Reflect getCache(Class<?> clz) {
+			Reflect ref = mCache.get(clz);
+			return ref == null ? new Reflect(clz) : ref;
+		}
+
+		private Reflect(Class<?> clz) {
+			mCache.put(clz, this);
+			initFiltertField(clz);
+			initFiltertMethod(clz);
+			Class<?> supclz = clz.getSuperclass();
+			if (supclz != null) {
+
+				if (Activity.class.equals(supclz)) {
+					parent = null;
+					return;
+				} else if (Object.class.equals(supclz)) {
+					parent = null;
+					return;
+				}
+				Reflect tmpParent = mCache.get(clz.getSuperclass());
+				if (tmpParent == null)
+					tmpParent = new Reflect(clz.getSuperclass());
+				parent = tmpParent;
+
+			} else
+				parent = null;
+		}
+
+		/**
+		 * 过滤出带注解的属性
+		 */
+		private void initFiltertField(Class<?> targetClass) {
+			Field[] fields = targetClass.getDeclaredFields();
+			for (int i = 0, s = fields.length; i < s; i++) {
+				XViewByID byID = fields[i].getAnnotation(XViewByID.class);
+				if (byID != null)
+					mFields.add(fields[i]);
+			}
+		}
+
+		static Class[] ANNOTATION_METHOD = new Class[] { XClick.class,
+				XLongClick.class, XOnCheckedChange.class, XOnTextChanged.class };
+
+		/**
+		 * 过滤出带注解的方法
+		 * 
+		 * @param target
+		 * @param targetClass
+		 */
+		private void initFiltertMethod(Class<?> targetClass) {
+			Method[] methods = targetClass.getDeclaredMethods();
+			for (int i = 0, s = methods.length; i < s; i++) {
+				Method meth = methods[i];
+				for (Class clz : ANNOTATION_METHOD) {
+					Object obj2 = meth.getAnnotation(clz);
+					if (obj2 != null) {
+						mMethods.add(meth);
+						break;
+					}
+				}
+			}
+		}
+
+	}
 
 	private class CallMethod implements OnCheckedChangeListener,
 			OnClickListener, OnLongClickListener,
@@ -106,17 +178,16 @@ public final class StupidReflect {
 	/**
 	 * 过滤出带注解的属性
 	 */
-	private void filterField(Object target, Class<?> targetClass) {
-		Field[] fields = targetClass.getDeclaredFields();
-		for (int i = 0, s = fields.length; i < s; i++) {
-			XViewByID byID = fields[i].getAnnotation(XViewByID.class);
+	private void filterField(Reflect mReflect, Object target) {
+		if (mReflect.parent != null)
+			filterField(mReflect.parent, target);
+		List<Field> fields = mReflect.mFields;
+		for (Field field : fields) {
+			XViewByID byID = field.getAnnotation(XViewByID.class);
 			if (byID != null)
-				setViewFieldByID(target, fields[i], byID);
+				setViewFieldByID(target, field, byID);
 		}
-		Class<?> superClass = targetClass.getSuperclass();
-		if (!Activity.class.equals(superClass)) {
-			filterField(target, superClass);
-		}
+
 	}
 
 	/**
@@ -124,12 +195,13 @@ public final class StupidReflect {
 	 * 
 	 * @param target
 	 * @param targetClass
+	 * @return
 	 */
-	private List<Method> filtertMethod(Object target, Class<?> targetClass) {
-		Method[] methods = targetClass.getDeclaredMethods();
-		List<Method> result = new ArrayList<Method>(0);
-		for (int i = 0, s = methods.length; i < s; i++) {
-			Method meth = methods[i];
+	private void filtertMethod(Reflect mReflect, Object target) {
+		if (mReflect.parent != null)
+			filtertMethod(mReflect.parent, target);
+		List<Method> methods = mReflect.mMethods;
+		for (Method meth : methods) {
 			XClick click = meth.getAnnotation(XClick.class);
 			XLongClick longClick = meth.getAnnotation(XLongClick.class);
 			XOnCheckedChange onChecked = meth
@@ -143,21 +215,17 @@ public final class StupidReflect {
 				setOnMethodLongClick(target, meth, longClick);
 			}
 			if (onChecked != null) {
-				setOnMethodChecked(targetClass, meth, onChecked);
+				setOnMethodChecked(meth, onChecked);
 			}
-			if (complete != null) {
-				result.add(meth);
-			}
+
 			if (changed != null) {
-				setTextChanged(targetClass, meth, changed);
+				setTextChanged(meth, changed);
 			}
 
 		}
-		return result;
 	}
 
-	private void setTextChanged(Class<?> targetClass, final Method method,
-			XOnTextChanged changed) {
+	private void setTextChanged(final Method method, XOnTextChanged changed) {
 		View view = findViewById(changed.editTextId());
 		if (view != null) {
 			final TextView et = (TextView) view;
@@ -195,6 +263,7 @@ public final class StupidReflect {
 									para[i] = view;
 								} else {
 									if (!"".equals(valueById.fromMethodName())) {
+
 										Method viewMet = ReflectUtil.getMethod(
 												view.getClass(),
 												valueById.fromMethodName());
@@ -227,8 +296,26 @@ public final class StupidReflect {
 
 	};
 
-	private void setOnMethodChecked(Object target, Method method,
-			XOnCheckedChange longClick) {
+	private Object getInvokeMethod(Object target, String... methodname) {
+		if (methodname.length > 0) {
+			Method viewMet = ReflectUtil.getMethod(target.getClass(),
+					methodname[0]);
+			Object result = ReflectUtil.invoke(target, viewMet);
+			if (methodname.length == 1)
+				return result;
+			else if (result == null)
+				return null;
+			else {
+				String[] destPos = new String[methodname.length - 1];
+				System.arraycopy(methodname, 1, destPos, 0, destPos.length);
+				return getInvokeMethod(result, destPos);
+			}
+		} else {
+			return null;
+		}
+	}
+
+	private void setOnMethodChecked(Method method, XOnCheckedChange longClick) {
 		int ids[] = longClick.value();
 		CallMethod call = map.get(method);
 		if (call == null) {
@@ -278,11 +365,9 @@ public final class StupidReflect {
 	}
 
 	public void init() {
-		filterField(mTarget, mTarget.getClass());
-		List<Method> mets = filtertMethod(mTarget, mTarget.getClass());
-		for (Method method : mets) {
-
-		}
+		Reflect mReflect = Reflect.getCache(mTarget.getClass());
+		filterField(mReflect, mTarget);
+		filtertMethod(mReflect, mTarget);
 	}
 
 	private void setOnMethodClick(Object target, Method method, XClick click) {
@@ -344,21 +429,21 @@ public final class StupidReflect {
 					}
 				}
 				if (valueById != null) { // 如果有注解
-					View view;
+					View view;// 获取数据的目标
 					if (valueById.fromId() == -1)
 						view = v;
 					else
 						view = findViewById(valueById.fromId());
+
 					if (view == null) {
 						para[i] = null;
 					} else if (View.class.isAssignableFrom(cls)) {
 						para[i] = view;
 					} else {
 						if (!"".equals(valueById.fromMethodName())) {
-							Method viewMet = ReflectUtil
-									.getMethod(view.getClass(),
-											valueById.fromMethodName());
-							para[i] = ReflectUtil.invoke(view, viewMet);
+							String[] methods = valueById.fromMethodName()
+									.trim().split("#");
+							para[i] = getInvokeMethod(view, methods);
 						} else
 							para[i] = ViewTo.toValue(view, cls);
 					}
