@@ -1,12 +1,8 @@
 package com.stupid.method.reflect;
 
-import java.lang.annotation.Retention;
-import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.lang.reflect.ParameterizedType;
-import java.lang.reflect.Type;
 
 import android.util.Log;
 
@@ -16,7 +12,7 @@ import android.util.Log;
  * @author wangx
  *
  */
-final public class ReflectUtil {
+final class ReflectUtil {
 	static final String tag = "ReflectUtil";
 
 	public static <T> T newInstance(Class<T> cls) {

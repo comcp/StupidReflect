@@ -4,7 +4,7 @@ import android.view.View;
 import android.widget.CheckBox;
 import android.widget.TextView;
 
-public class ViewTo {
+class ViewTo {
 	public static boolean toBoolean(View view) {
 		if (view instanceof CheckBox) {
 			return ((CheckBox) view).isChecked();
